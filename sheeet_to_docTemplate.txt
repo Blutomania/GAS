@@ -1,0 +1,80 @@
+function onOpen() {
+var menuEntries = [{name: "One Doc", functionName: "createDocFromRows"}];
+var ss = SpreadsheetApp.getActiveSpreadsheet();
+ss.updateMenu("Create Doc", menuEntries);
+}
+
+
+function createDocFromRows(){
+// DOC Data
+var TEMPLATEID = "1AX5Slx3hbhpMIV1tgWoqEa1E90KkpivK8w1Grv64gZ4"; // Label Copy Doc ID
+var FOLDERID = "1XGCoMSju4RwEx0-jgGTsWUJrjJh9GpeO"; // folder ID of where to put completed Docs
+var ANR_PERSON = "jc@rocketsongs.com";
+var TODAY = (Utilities.formatDate(new Date(), "PST", "yyyy-MM-dd"));
+
+// Spreadsheet Data
+var ss = SpreadsheetApp.getActiveSpreadsheet();
+var sheet = ss.getActiveSheet();
+var ranger = sheet.getSelection().getActiveRange();
+var num = ranger.getNumRows()
+var dataArray = ranger.getValues();
+
+// Write Basic Data
+var artist = String(dataArray[0][5]);
+var useremail = String(dataArray[0][6]);
+var numSongs = num.toString();
+
+// create the new Label Copy Document 
+var FILENAME = String(artist + "_LabelCopy_"); // To save new files as
+var destFolder = DriveApp.getFolderById(FOLDERID);
+var docid = DriveApp.getFileById(TEMPLATEID).makeCopy(FILENAME, destFolder).getId(); 
+var doc = DocumentApp.openById(docid);
+var body = doc.getActiveSection();
+const hOne={};
+    hOne[DocumentApp.Attribute.BOLD]=true;
+    hOne[DocumentApp.Attribute.FONT_SIZE] = 10;
+const hTwo={};
+    hTwo[DocumentApp.Attribute.BOLD]=false;
+    hTwo[DocumentApp.Attribute.FONT_SIZE] = 9;
+    
+var newText = body.copy()
+newText.clear();
+
+doc.addEditor(ANR_PERSON) 
+
+body.replaceText("##Artist##", artist);
+body.replaceText("##user email##", useremail);
+body.replaceText("##Timestamp##", String(TODAY));
+body.replaceText("##NUMBER##", numSongs);
+
+// Prepare to write song data
+var foundTag = body.findText("##XXXX##");
+Logger.log('found it', foundTag);
+var nLi = "\n";
+newText.editAsText().insertText(0, nLi);
+Logger.log('Created', newText);
+var brk = "\n\n";
+
+// Build the text to insert
+
+    for(var i = 0; i < num; i++) {
+    var songName = String(dataArray[i][1]);
+    var sWs = String(dataArray[i][2]);
+    var pub =  String(dataArray[i][3]);
+newText.editAsText().appendText('SONG NAME:'+ nLi).setAttributes(hOne)
+newText.editAsText().appendText(songName + brk).setAttributes(hTwo);
+newText.editAsText().appendText('SONGWRITER(S):' + nLi).setAttributes(hOne);
+newText.editAsText().appendText(sWs + brk).setAttributes(hTwo);
+newText.editAsText().appendText('PUBLISHER(S):' + nLi).setAttributes(hOne);
+newText.editAsText().appendText(pub + brk).setAttributes(hTwo);
+}       
+
+// Insert text at the beginning of the document.
+body.replaceText("##XXXX##", newText.getText());
+
+//Prepare to save and close and message
+doc.saveAndClose();
+ss.toast("Label Copy Document Created");
+}
+
+
